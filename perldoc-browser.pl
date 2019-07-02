@@ -51,7 +51,9 @@ helper warmup_inc_dirs => sub ($c, $perl_version) {
   my $exit = $? >> 8;
   die "Failed to retrieve include directories for $bin (exit $exit)\n" if $exit;
   chomp @output;
-  return $inc_dirs{$perl_version} = [grep { length $_ && $_ ne '.' } @output];
+  return $inc_dirs{$perl_version} = [
+    map  { -d "$_/pods" ? ($_, "$_/pods") : $_ }
+    grep { length $_ && $_ ne '.' } @output ];
 };
 helper inc_dirs => sub ($c, $perl_version) { $inc_dirs{$perl_version} // [] };
 
