@@ -12,6 +12,7 @@ use File::Path 'make_path';
 use File::pushd;
 use File::Spec;
 use File::Temp;
+use File::Which qw{which};
 use IPC::Run3;
 use List::Util 'first';
 use Module::Runtime 'require_module';
@@ -24,6 +25,7 @@ sub register ($self, $app, $conf) {
   $app->helper(missing_core_modules => \&_missing_core_modules);
   $app->helper(download_perl_extracted => \&_download_perl_extracted);
   $app->helper(copy_modules_from_source => \&_copy_modules_from_source);
+  $app->helper(cpanm_installdeps => \&_cpanm_installdeps);
 }
 
 sub _missing_core_modules ($c, $inc_dirs) {
@@ -149,6 +151,26 @@ sub _copy_modules_from_source ($c, $perl_version, @modules) {
     copy($source_path, $target) or die "Failed to copy $source_path to $target: $!";
     print "Copied $module ($source_path) to $target\n";
   }
+}
+
+sub _cpanm_installdeps ($c, $perl_version, $cpanfile, @cpanm_opt) {
+  my $perl = $c->perls_dir->child($perl_version, 'bin', 'perl');
+  if (my $cpanm = which 'cpanm') {
+    local %ENV = %ENV;
+    delete $ENV{$_}
+      for qw{PERL5OPT PERL5LIB PERL_MB_OPT PERL_LOCAL_LIB_ROOT PERL_MM_OPT PERL_CPANM_OPT};
+    my @cmd = ($perl,
+      $cpanm => '--installdeps',
+      '--cpanfile' => $cpanfile->to_string,
+      '--quiet' => '--notest',
+      @cpanm_opt,
+      $cpanfile->dirname->to_string);
+    say join ' ', 'Running command', @cmd;
+    run3 \@cmd, undef, sub { print "@_"; }, sub { print STDERR "Error: @_"; };
+  }
+  my $exit = $? >> 8;
+  die "Failed to install dependencies for $perl (exit $exit)\n" if $exit;
+  return $c;
 }
 
 1;

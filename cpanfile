@@ -5,6 +5,7 @@ requires 'File::Path';
 requires 'File::pushd';
 requires 'File::Spec';
 requires 'File::Temp';
+requires 'File::Which';
 requires 'IPC::Run3';
 requires 'List::Util' => '1.50';
 requires 'MetaCPAN::Pod::XHTML';
